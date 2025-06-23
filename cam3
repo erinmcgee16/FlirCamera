@@ -1,0 +1,80 @@
+import numpy as np
+import cv2
+import spidev
+import time
+
+# Setup SPI
+spi = spidev.SpiDev()
+spi.open(0, 1)  # CE1
+spi.max_speed_hz = 18000000
+
+def grab_full_frame():
+    # Full frame: 4 segments, 60 packets each, 164 bytes per packet
+    frame = np.zeros((120, 160), dtype=np.uint16)
+    segments_collected = [False] * 4
+    segment_data = [np.zeros((60, 164), dtype=np.uint8) for _ in range(4)]
+    max_tries = 100
+    tries = 0
+
+    while not all(segments_collected) and tries < max_tries:
+        for i in range(60):
+            data = spi.readbytes(164)
+            if len(data) != 164:
+                continue
+
+            packet = np.frombuffer(bytearray(data), dtype=np.uint8)
+            segment_number = (packet[0] >> 4) & 0x07
+
+            if segment_number < 1 or segment_number > 4:
+                continue  # bad segment
+
+            seg_idx = segment_number - 1
+            segment_data[seg_idx][i] = packet
+            segments_collected[seg_idx] = True
+
+        tries += 1
+
+    if not all(segments_collected):
+        return None
+
+    # Now build final 120x160 image
+    for seg_idx in range(4):
+        for row in range(60):
+            packet = segment_data[seg_idx][row]
+            row_index = seg_idx * 30 + row  # 4 segments * 30 = 120 lines
+            if row_index >= 120:
+                continue
+            for col in range(160):
+                hi = packet[4 + col*2]
+                lo = packet[5 + col*2]
+                value = (hi << 8) | lo
+                frame[row_index, col] = value
+
+    return frame
+
+while True:
+    frame = None
+    while frame is None:
+        frame = grab_full_frame()
+
+    # Normalize and convert to display
+    norm = cv2.normalize(frame, None, 0, 255, cv2.NORM_MINMAX)
+    img = norm.astype(np.uint8)
+    img_colored = cv2.applyColorMap(img, cv2.COLORMAP_INFERNO)
+
+    # Optional rotation (adjust to your setup)
+    img_colored = cv2.rotate(img_colored, cv2.ROTATE_90_CLOCKWISE)
+
+    # Resize for easier viewing
+    img_big = cv2.resize(img_colored, (640, 480), interpolation=cv2.INTER_LINEAR)
+
+    # Display
+    cv2.imshow("FLIR Lepton 3.5 Thermal", img_big)
+    if cv2.waitKey(1) == 27:  # ESC to quit
+        break
+
+    time.sleep(0.01)
+
+# Cleanup
+cv2.destroyAllWindows()
+spi.close()
