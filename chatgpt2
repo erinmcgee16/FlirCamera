@@ -1,0 +1,48 @@
+def grab_frame_lepton3():
+    raw_frame = np.zeros((240, 164), dtype=np.uint8)
+    segments_found = [False, False, False, False]
+    max_tries = 1000
+    tries = 0
+
+    while not all(segments_found) and tries < max_tries:
+        for i in range(60):
+            data = spi.readbytes(164)
+            segment = (data[0] >> 4) & 0x07
+            if segment < 1 or segment > 4:
+                continue  # bad segment number
+
+            segment_index = segment - 1
+            row_index = segment_index * 60 + i
+
+            raw_frame[row_index] = np.frombuffer(bytearray(data), dtype=np.uint8)
+            segments_found[segment_index] = True
+        tries += 1
+
+    if all(segments_found):
+        return raw_frame
+    else:
+        return None
+
+def extract_image(raw):
+    image = np.zeros((120, 160), dtype=np.uint16)
+    for i in range(120):
+        line = raw[i]
+        for j in range(160):
+            image[i, j] = (line[4 + j*2] << 8) | line[5 + j*2]
+    return image
+
+while True:
+    raw_frame = None
+    while raw_frame is None:
+        raw_frame = grab_frame_lepton3()
+
+    image = extract_image(raw_frame)
+    norm = cv2.normalize(image, None, 0, 255, cv2.NORM_MINMAX)
+    disp = cv2.applyColorMap(norm.astype(np.uint8), cv2.COLORMAP_INFERNO)
+    disp = cv2.rotate(disp, cv2.ROTATE_90_CLOCKWISE)
+    disp_big = cv2.resize(disp, (320, 240), interpolation=cv2.INTER_LINEAR)
+
+    cv2.imshow("Thermal", disp_big)
+    if cv2.waitKey(1) == 27:
+        break
+    time.sleep(0.01)
