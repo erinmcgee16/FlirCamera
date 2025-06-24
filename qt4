@@ -1,0 +1,5 @@
+mkdir -p ~/qt4-offline && cd ~/qt4-offline
+
+wget https://security.debian.org/debian-security/pool/updates/main/q/qt4-x11/libqt4-dev_4.8.7+dfsg-18+deb10u2_armhf.deb
+
+wget https://security.debian.org/debian-security/pool/updates/main/q/qt4-x11/qt4-dev-tools_4.8.7+dfsg-18+deb10u2_armhf.deb
