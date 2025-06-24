@@ -3,3 +3,74 @@ mkdir -p ~/qt4-offline && cd ~/qt4-offline
 wget https://security.debian.org/debian-security/pool/updates/main/q/qt4-x11/libqt4-dev_4.8.7+dfsg-18+deb10u2_armhf.deb
 
 wget https://security.debian.org/debian-security/pool/updates/main/q/qt4-x11/qt4-dev-tools_4.8.7+dfsg-18+deb10u2_armhf.deb
+
+
+millenium@raspberrypi:~/qt4-offline $ sudo dpkg -i *.deb
+Selecting previously unselected package libqt4-dev:armhf.
+(Reading database ... 135657 files and directories currently installed.)
+Preparing to unpack libqt4-dev_4.8.7+dfsg-18+deb10u2_armhf.deb ...
+Unpacking libqt4-dev:armhf (4:4.8.7+dfsg-18+deb10u2) ...
+Selecting previously unselected package qt4-dev-tools:armhf.
+Preparing to unpack qt4-dev-tools_4.8.7+dfsg-18+deb10u2_armhf.deb ...
+Unpacking qt4-dev-tools:armhf (4:4.8.7+dfsg-18+deb10u2) ...
+dpkg: dependency problems prevent configuration of libqt4-dev:armhf:
+ libqt4-dev:armhf depends on libqt4-dbus (= 4:4.8.7+dfsg-18+deb10u2).
+ libqt4-dev:armhf depends on libqt4-declarative (= 4:4.8.7+dfsg-18+deb10u2).
+ libqt4-dev:armhf depends on libqt4-designer (= 4:4.8.7+dfsg-18+deb10u2).
+ libqt4-dev:armhf depends on libqt4-dev-bin (= 4:4.8.7+dfsg-18+deb10u2).
+ libqt4-dev:armhf depends on libqt4-help (= 4:4.8.7+dfsg-18+deb10u2).
+ libqt4-dev:armhf depends on libqt4-network (= 4:4.8.7+dfsg-18+deb10u2).
+ libqt4-dev:armhf depends on libqt4-qt3support (= 4:4.8.7+dfsg-18+deb10u2).
+ libqt4-dev:armhf depends on libqt4-script (= 4:4.8.7+dfsg-18+deb10u2).
+ libqt4-dev:armhf depends on libqt4-scripttools (= 4:4.8.7+dfsg-18+deb10u2).
+ libqt4-dev:armhf depends on libqt4-sql (= 4:4.8.7+dfsg-18+deb10u2).
+ libqt4-dev:armhf depends on libqt4-svg (= 4:4.8.7+dfsg-18+deb10u2).
+ libqt4-dev:armhf depends on libqt4-test (= 4:4.8.7+dfsg-18+deb10u2).
+ libqt4-dev:armhf depends on libqt4-xml (= 4:4.8.7+dfsg-18+deb10u2).
+ libqt4-dev:armhf depends on libqt4-xmlpatterns (= 4:4.8.7+dfsg-18+deb10u2).
+ libqt4-dev:armhf depends on libqtcore4 (= 4:4.8.7+dfsg-18+deb10u2).
+ libqt4-dev:armhf depends on libqtgui4 (= 4:4.8.7+dfsg-18+deb10u2).
+ libqt4-dev:armhf depends on qt4-linguist-tools (= 4:4.8.7+dfsg-18+deb10u2).
+ libqt4-dev:armhf depends on qt4-qmake (= 4:4.8.7+dfsg-18+deb10u2).
+
+dpkg: error processing package libqt4-dev:armhf (--install):
+ dependency problems - leaving unconfigured
+dpkg: dependency problems prevent configuration of qt4-dev-tools:armhf:
+ qt4-dev-tools:armhf depends on libqt4-sql-sqlite.
+ qt4-dev-tools:armhf depends on libc6 (>= 2.28).
+ qt4-dev-tools:armhf depends on libgcc1 (>= 1:3.5).
+ qt4-dev-tools:armhf depends on libpng16-16 (>= 1.6.2-1).
+ qt4-dev-tools:armhf depends on libqt4-declarative (= 4:4.8.7+dfsg-18+deb10u2).
+ qt4-dev-tools:armhf depends on libqt4-help (= 4:4.8.7+dfsg-18+deb10u2).
+ qt4-dev-tools:armhf depends on libqt4-network (= 4:4.8.7+dfsg-18+deb10u2).
+ qt4-dev-tools:armhf depends on libqt4-sql (= 4:4.8.7+dfsg-18+deb10u2).
+ qt4-dev-tools:armhf depends on libqt4-xml (= 4:4.8.7+dfsg-18+deb10u2).
+ qt4-dev-tools:armhf depends on libqt4-xmlpatterns (= 4:4.8.7+dfsg-18+deb10u2).
+ qt4-dev-tools:armhf depends on libqtcore4 (= 4:4.8.7+dfsg-18+deb10u2).
+ qt4-dev-tools:armhf depends on libqtdbus4 (= 4:4.8.7+dfsg-18+deb10u2).
+ qt4-dev-tools:armhf depends on libqtgui4 (= 4:4.8.7+dfsg-18+deb10u2).
+ qt4-dev-tools:armhf depends on libstdc++6 (>= 4.4.0).
+ qt4-dev-tools:armhf depends on libx11-6.
+ qt4-dev-tools:armhf depends on libxtst6.
+
+dpkg: error processing package qt4-dev-tools:armhf (--install):
+ dependency problems - leaving unconfigured
+Processing triggers for gnome-menus (3.36.0-1.1) ...
+Processing triggers for mailcap (3.70+nmu1) ...
+Processing triggers for desktop-file-utils (0.26-1) ...
+Processing triggers for man-db (2.11.2-2) ...
+Errors were encountered while processing:
+ libqt4-dev:armhf
+ qt4-dev-tools:armhf
+millenium@raspberrypi:~/qt4-offline $ sudo apt-get install -f
+Reading package lists... Done
+Building dependency tree... Done
+Reading state information... Done
+Correcting dependencies... Done
+The following packages will be REMOVED:
+  libqt4-dev:armhf qt4-dev-tools:armhf
+0 upgraded, 0 newly installed, 2 to remove and 19 not upgraded.
+2 not fully installed or removed.
+After this operation, 21.4 MB disk space will be freed.
+Do you want to continue? [Y/n] n
+
