@@ -1,0 +1,57 @@
+import numpy as np
+import cv2
+import spidev
+import time
+
+# Constants
+PACKET_SIZE = 164
+PACKETS_PER_FRAME = 240
+FRAME_HEIGHT = 120
+FRAME_WIDTH = 160
+
+# SPI setup
+spi = spidev.SpiDev()
+spi.open(0, 1)
+spi.max_speed_hz = 20000000
+
+def read_frame():
+    frame = np.zeros((FRAME_HEIGHT, FRAME_WIDTH), dtype=np.uint16)
+    valid_packets = 0
+    tries = 0
+    max_tries = 1000
+
+    while valid_packets < PACKETS_PER_FRAME and tries < max_tries:
+        packet = spi.readbytes(PACKET_SIZE)
+        tries += 1
+
+        if packet[0] & 0x0f == 0x0f:
+            continue  # discard bad packet
+
+        packet_number = packet[1]
+        if packet_number >= PACKETS_PER_FRAME:
+            continue
+
+        row = packet_number
+        for i in range(80):
+            value = (packet[4 + i*2] << 8) | packet[5 + i*2]
+            frame[row, i] = value
+        valid_packets += 1
+
+    if valid_packets == PACKETS_PER_FRAME:
+        return frame
+    else:
+        return None
+
+# Main test loop
+print("Reading one frame...")
+
+frame = read_frame()
+if frame is None:
+    print("❌ Could not read frame")
+else:
+    print("✅ Frame received!")
+
+    norm = cv2.normalize(frame, None, 0, 255, cv2.NORM_MINMAX)
+    disp = cv2.applyColorMap(norm.astype(np.uint8), cv2.COLORMAP_INFERNO)
+    cv2.imwrite("lepton3_frame.png", disp)
+    print("Saved image as 'lepton3_frame.png'")
