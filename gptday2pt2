@@ -4,10 +4,11 @@ import spidev
 import time
 
 # Constants
+SEGMENTS = 4
+PACKETS_PER_SEGMENT = 60
 PACKET_SIZE = 164
-PACKETS_PER_FRAME = 240
-FRAME_HEIGHT = 120
-FRAME_WIDTH = 160
+IMAGE_WIDTH = 160
+IMAGE_HEIGHT = 120
 
 # SPI setup
 spi = spidev.SpiDev()
@@ -15,43 +16,64 @@ spi.open(0, 1)
 spi.max_speed_hz = 20000000
 
 def read_frame():
-    frame = np.zeros((FRAME_HEIGHT, FRAME_WIDTH), dtype=np.uint16)
-    valid_packets = 0
+    # 4 segments, 60 packets each
+    frame = np.zeros((IMAGE_HEIGHT, IMAGE_WIDTH), dtype=np.uint16)
+    segments_collected = 0
+    segments = [None] * SEGMENTS
     tries = 0
     max_tries = 1000
 
-    while valid_packets < PACKETS_PER_FRAME and tries < max_tries:
-        packet = spi.readbytes(PACKET_SIZE)
+    while segments_collected < SEGMENTS and tries < max_tries:
         tries += 1
+        packet = spi.readbytes(PACKET_SIZE)
+        packet = np.array(packet, dtype=np.uint8)
 
         if packet[0] & 0x0f == 0x0f:
-            continue  # discard bad packet
+            segment_number = packet[1]
+            continue  # sync packet; skip
 
         packet_number = packet[1]
-        if packet_number >= PACKETS_PER_FRAME:
+        if packet_number >= PACKETS_PER_SEGMENT:
+            continue  # invalid packet number
+
+        # Extract segment number (stored in packet[20] and packet[21])
+        segment_number = ((packet[20] & 0x70) >> 4)
+        if segment_number >= SEGMENTS:
             continue
 
-        row = packet_number
+        # Only collect each segment once
+        if segments[segment_number] is None:
+            segments[segment_number] = np.zeros((PACKETS_PER_SEGMENT, IMAGE_WIDTH), dtype=np.uint16)
+
         for i in range(80):
             value = (packet[4 + i*2] << 8) | packet[5 + i*2]
-            frame[row, i] = value
-        valid_packets += 1
+            segments[segment_number][packet_number, i] = value
 
-    if valid_packets == PACKETS_PER_FRAME:
-        return frame
-    else:
+        # Check if segment is complete
+        if np.count_nonzero(segments[segment_number]) >= (PACKETS_PER_SEGMENT * 80):
+            segments_collected = sum([1 for s in segments if s is not None])
+
+    if segments_collected != SEGMENTS:
         return None
 
-# Main test loop
-print("Reading one frame...")
+    # Assemble full image
+    for s in range(SEGMENTS):
+        start_row = s * PACKETS_PER_SEGMENT
+        frame[start_row:start_row+PACKETS_PER_SEGMENT, :] = segments[s]
+
+    return frame
+
+# Main test
+print("Reading one corrected frame...")
 
 frame = read_frame()
 if frame is None:
-    print("❌ Could not read frame")
+    print("❌ Could not read frame.")
 else:
     print("✅ Frame received!")
 
     norm = cv2.normalize(frame, None, 0, 255, cv2.NORM_MINMAX)
     disp = cv2.applyColorMap(norm.astype(np.uint8), cv2.COLORMAP_INFERNO)
-    cv2.imwrite("lepton3_frame.png", disp)
-    print("Saved image as 'lepton3_frame.png'")
+    cv2.imwrite("lepton3_fixed.png", disp)
+    print("Saved image as 'lepton3_fixed.png'")
+
