@@ -1,0 +1,71 @@
+import numpy as np
+import cv2
+import spidev
+import time
+
+# Constants
+SEGMENTS = 4
+PACKETS_PER_SEGMENT = 60
+PACKET_SIZE = 164  # 2 header + 160 data + 2 CRC (ignored)
+
+# SPI setup
+spi = spidev.SpiDev()
+spi.open(0, 1)  # bus 0, device CE1
+spi.max_speed_hz = 20000000
+
+def read_segment():
+    segment = np.zeros((PACKETS_PER_SEGMENT, PACKET_SIZE), dtype=np.uint8)
+    valid_packets = 0
+    while valid_packets < PACKETS_PER_SEGMENT:
+        packet = spi.readbytes(PACKET_SIZE)
+        packet = np.array(packet, dtype=np.uint8)
+        packet_number = packet[1]
+        if packet[0] == 0x0F:  # segment header
+            return None, packet[1]  # segment ID is packet[1]
+        if packet_number < PACKETS_PER_SEGMENT:
+            segment[packet_number] = packet
+            valid_packets += 1
+    return segment, None
+
+def capture_frame():
+    segments = [None] * SEGMENTS
+    received = 0
+    tries = 0
+    while received < SEGMENTS and tries < 100:
+        data, segment_id = read_segment()
+        if data is not None and 0 <= segment_id < SEGMENTS:
+            if segments[segment_id] is None:
+                segments[segment_id] = data
+                received += 1
+        tries += 1
+    return segments if received == SEGMENTS else None
+
+def extract_image(segments):
+    image = np.zeros((120, 160), dtype=np.uint16)
+    for s in range(SEGMENTS):
+        for i in range(PACKETS_PER_SEGMENT):
+            row = s * PACKETS_PER_SEGMENT + i
+            packet = segments[s][i]
+            for col in range(80):
+                high_byte = packet[4 + col * 2]
+                low_byte = packet[5 + col * 2]
+                value = (high_byte << 8) | low_byte
+                image[row, col] = value
+    return image
+
+# Main loop
+while True:
+    segments = capture_frame()
+    if segments is None:
+        continue
+
+    image = extract_image(segments)
+    norm = cv2.normalize(image, None, 0, 255, cv2.NORM_MINMAX)
+    disp = cv2.applyColorMap(norm.astype(np.uint8), cv2.COLORMAP_INFERNO)
+
+    cv2.imshow("Lepton 3.5 Thermal", disp)
+    if cv2.waitKey(1) == 27:
+        break
+
+cv2.destroyAllWindows()
+spi.close()
