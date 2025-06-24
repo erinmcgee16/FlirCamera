@@ -1,0 +1,50 @@
+import spidev
+import numpy as np
+from PIL import Image
+import time
+
+# Lepton settings
+WIDTH = 160
+HEIGHT = 120
+PACKET_SIZE = 164
+PACKETS_PER_FRAME = 240
+
+def read_frame(spi):
+    frame = np.zeros((HEIGHT, WIDTH), dtype=np.uint16)
+    valid_packets = 0
+
+    while valid_packets < PACKETS_PER_FRAME:
+        raw = spi.readbytes(PACKET_SIZE)
+        if len(raw) != PACKET_SIZE:
+            continue
+
+        packet_number = raw[1]
+        if (raw[0] & 0x0F) != 0x0F and packet_number < PACKETS_PER_FRAME:
+            line = np.frombuffer(bytearray(raw[4:]), dtype='>u2')  # big endian 16-bit
+            frame[packet_number] = line
+            valid_packets += 1
+
+    return frame
+
+# Open SPI
+spi = spidev.SpiDev()
+spi.open(0, 0)
+spi.max_speed_hz = 20000000
+
+# Give camera time to boot
+time.sleep(0.5)
+
+# Read one frame
+print("Capturing...")
+frame = read_frame(spi)
+print("Done.")
+
+# Normalize to 8-bit image
+normalized = ((frame - frame.min()) * (255.0 / (frame.max() - frame.min()))).astype(np.uint8)
+
+# Save image
+img = Image.fromarray(normalized)
+img.save("thermal.png")
+print("Image saved to thermal.png")
+
+spi.close()
