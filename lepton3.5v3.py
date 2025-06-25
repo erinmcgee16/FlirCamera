@@ -1,3 +1,11 @@
+import numpy as np
+import spidev
+import time
+
+spi = spidev.SpiDev()
+spi.open(0, 1)
+spi.max_speed_hz = 20000000
+
 def grab_frame_simple():
     image = np.zeros((120, 160), dtype=np.uint16)
     packets = []
